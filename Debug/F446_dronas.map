@@ -4120,23 +4120,23 @@ OUTPUT(F446_dronas.elf elf32-littlearm)
  .debug_macro   0x0000000000021e7a      0x1e7 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
  .debug_macro   0x0000000000022061      0x1e8 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
-.debug_line     0x0000000000000000     0xb638
+.debug_line     0x0000000000000000     0xb636
  .debug_line    0x0000000000000000      0x99f Core/Src/MPU6050.o
- .debug_line    0x000000000000099f      0xa09 Core/Src/main.o
- .debug_line    0x00000000000013a8      0x7b7 Core/Src/stm32f4xx_hal_msp.o
- .debug_line    0x0000000000001b5f      0x7cc Core/Src/stm32f4xx_it.o
- .debug_line    0x000000000000232b      0x70d Core/Src/system_stm32f4xx.o
- .debug_line    0x0000000000002a38       0x85 Core/Startup/startup_stm32f446retx.o
- .debug_line    0x0000000000002abd      0x8f7 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
- .debug_line    0x00000000000033b4      0xa1b Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
- .debug_line    0x0000000000003dcf      0x9c5 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
- .debug_line    0x0000000000004794      0x8c2 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
- .debug_line    0x0000000000005056     0x1b31 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
- .debug_line    0x0000000000006b87      0x94f Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
- .debug_line    0x00000000000074d6      0xae0 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.o
- .debug_line    0x0000000000007fb6     0x1970 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
- .debug_line    0x0000000000009926      0xd0d Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
- .debug_line    0x000000000000a633     0x1005 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
+ .debug_line    0x000000000000099f      0xa07 Core/Src/main.o
+ .debug_line    0x00000000000013a6      0x7b7 Core/Src/stm32f4xx_hal_msp.o
+ .debug_line    0x0000000000001b5d      0x7cc Core/Src/stm32f4xx_it.o
+ .debug_line    0x0000000000002329      0x70d Core/Src/system_stm32f4xx.o
+ .debug_line    0x0000000000002a36       0x85 Core/Startup/startup_stm32f446retx.o
+ .debug_line    0x0000000000002abb      0x8f7 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
+ .debug_line    0x00000000000033b2      0xa1b Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
+ .debug_line    0x0000000000003dcd      0x9c5 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.o
+ .debug_line    0x0000000000004792      0x8c2 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.o
+ .debug_line    0x0000000000005054     0x1b31 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.o
+ .debug_line    0x0000000000006b85      0x94f Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.o
+ .debug_line    0x00000000000074d4      0xae0 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.o
+ .debug_line    0x0000000000007fb4     0x1970 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.o
+ .debug_line    0x0000000000009924      0xd0d Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.o
+ .debug_line    0x000000000000a631     0x1005 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.o
 
 .debug_str      0x0000000000000000    0xd1a92
  .debug_str     0x0000000000000000    0xcd4b0 Core/Src/MPU6050.o

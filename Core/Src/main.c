@@ -173,13 +173,12 @@ int main(void) {
 	HAL_UART_DMAStop(&huart4);
 	HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
 
-	HAL_Delay(100);
-//	MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
-
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+	HAL_Delay(100);
+
 	while (1) {
 
 		MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);

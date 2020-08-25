@@ -37,13 +37,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
  16 .debug_macro  00022249  00000000  00000000  00033a30  2**0
                   CONTENTS, READONLY, DEBUGGING
- 17 .debug_line   0000b638  00000000  00000000  00055c79  2**0
+ 17 .debug_line   0000b636  00000000  00000000  00055c79  2**0
                   CONTENTS, READONLY, DEBUGGING
- 18 .debug_str    000d1a92  00000000  00000000  000612b1  2**0
+ 18 .debug_str    000d1a92  00000000  00000000  000612af  2**0
                   CONTENTS, READONLY, DEBUGGING
- 19 .comment      0000007b  00000000  00000000  00132d43  2**0
+ 19 .comment      0000007b  00000000  00000000  00132d41  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00004290  00000000  00000000  00132dc0  2**2
+ 20 .debug_frame  00004290  00000000  00000000  00132dbc  2**2
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -1006,12 +1006,14 @@ int main(void) {
  8000902:	4856      	ldr	r0, [pc, #344]	; (8000a5c <main+0x1c8>)
  8000904:	f004 f802 	bl	800490c <HAL_UART_Receive_DMA>
 
+	/* USER CODE END 2 */
+
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	HAL_Delay(100);
  8000908:	2064      	movs	r0, #100	; 0x64
  800090a:	f000 fdbd 	bl	8001488 <HAL_Delay>
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
 	while (1) {
 
 		MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
