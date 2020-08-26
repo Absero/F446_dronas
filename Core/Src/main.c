@@ -53,14 +53,13 @@ UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_uart4_rx;
 
 /* USER CODE BEGIN PV */
-uint16_t adcData[1] = { 0 };
 uint8_t mPaketas[10] = { 0 };
 
 struct {
 	uint8_t dataUart :1;
-	uint8_t MPU_DataWaiting :1;
+	uint8_t accDataReady :1;
 	uint8_t rem :6;
-} mFlags;
+} mFlags = { 0, 1, 0 };
 
 RawData_Def myAccelRaw, myGyroRaw;
 ScaledData_Def myAccelScaled, myGyroScaled;
@@ -86,15 +85,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C2) {
-		//Accel Raw Data
-		if (mFlags.MPU_DataWaiting) {
-
-		}
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_10) {
+		mFlags.accDataReady = 1;
 	}
 }
 
@@ -147,25 +143,24 @@ int main(void) {
 
 	MPU6050_Init(&hi2c3);
 
-	myMpuConfig.Accel_Full_Scale = AFS_SEL_2g;
+	myMpuConfig.Accel_Full_Scale = AFS_SEL_4g;
 	myMpuConfig.ClockSource = Internal_8MHz;
-	myMpuConfig.CONFIG_DLPF = DLPF_260A_256G_Hz;
-	myMpuConfig.Gyro_Full_Scale = FS_SEL_1000;
+	myMpuConfig.CONFIG_DLPF = DLPF_184A_188G_Hz;
+	myMpuConfig.Gyro_Full_Scale = FS_SEL_500;
 	myMpuConfig.Sleep_Mode_Bit = 0;  //1: sleep mode, 0: normal mode
 	MPU6050_Config(&myMpuConfig);
 
-//	I2C_Write8(INT_PIN_CFG, 1 << 4);		//clear flag after read
-//	I2C_Write8(INT_ENABLE_REG, 1);		//enable interupt
+	I2C_Write8(INT_PIN_CFG, 1 << 4);		//clear flag after read
+	I2C_Write8(INT_ENABLE_REG, 1);		//enable interupt
 
 	//==== PWM init ================================================================
 	HAL_TIM_Base_Start(&htim4);
 	HAL_TIM_Base_Start_IT(&htim14);	//apsauga nuo negaunamu duomenu
 
-	//todo atkomentuoti
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);	//BL
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);	//FL
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);	//BR
-//	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);	//FR
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);	//BL
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);	//FL
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);	//BR
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);	//FR
 
 	//==== uart init ===============================================================
 	HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
@@ -177,11 +172,15 @@ int main(void) {
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	HAL_Delay(100);
+	HAL_Delay(50);
 
 	while (1) {
 
-		MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
+		if (mFlags.accDataReady) {
+			mFlags.accDataReady = 0;
+			MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
+		}
+
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
