@@ -148,7 +148,7 @@ void MPU6050_Set_FSYNC(enum EXT_SYNC_SET_ENUM ext_Sync) {
 }
 
 //9- Get Accel Raw Data
-void MPU6050_Get_Accel_RawData(RawData_Def *rawDef) {
+void MPU6050_Get_Accel_RawData(RawData_t *rawDef) {
 	uint8_t i2cBuf[2];
 	uint8_t AcceArr[6], GyroArr[6];
 
@@ -169,9 +169,9 @@ void MPU6050_Get_Accel_RawData(RawData_Def *rawDef) {
 }
 
 //10- Get Accel scaled data (g unit of gravity, 1g = 9.81m/s2)
-void MPU6050_Get_Accel_Scale(ScaledData_Def *scaledDef) {
+void MPU6050_Get_Accel_Scale(ScaledData_t *scaledDef) {
 
-	RawData_Def AccelRData;
+	RawData_t AccelRData;
 	MPU6050_Get_Accel_RawData(&AccelRData);
 
 	//Accel Scale data
@@ -180,8 +180,8 @@ void MPU6050_Get_Accel_Scale(ScaledData_Def *scaledDef) {
 	scaledDef->z = ((AccelRData.z + 0.0f) * accelScalingFactor);
 }
 
-void MPU6050_Get_Accel_Scale_AllData(ScaledData_Def *scaledDef,
-		RawData_Def *AccelRData) {
+void MPU6050_Get_Accel_Scale_AllData(ScaledData_t *scaledDef,
+		RawData_t *AccelRData) {
 	MPU6050_Get_Accel_RawData(AccelRData);
 
 	//Accel Scale data
@@ -191,8 +191,8 @@ void MPU6050_Get_Accel_Scale_AllData(ScaledData_Def *scaledDef,
 }
 
 //11- Get Accel calibrated data
-void MPU6050_Get_Accel_Cali(ScaledData_Def *CaliDef) {
-	ScaledData_Def AccelScaled;
+void MPU6050_Get_Accel_Cali(ScaledData_t *CaliDef) {
+	ScaledData_t AccelScaled;
 	MPU6050_Get_Accel_Scale(&AccelScaled);
 
 	//Accel Scale data
@@ -201,7 +201,7 @@ void MPU6050_Get_Accel_Cali(ScaledData_Def *CaliDef) {
 	CaliDef->z = (AccelScaled.z) - A_Z_Bias; // z-Axis
 }
 //12- Get Gyro Raw Data
-void MPU6050_Get_Gyro_RawData(RawData_Def *rawDef) {
+void MPU6050_Get_Gyro_RawData(RawData_t *rawDef) {
 
 	//Accel Raw Data
 	rawDef->x = GyroRW[0];
@@ -211,8 +211,8 @@ void MPU6050_Get_Gyro_RawData(RawData_Def *rawDef) {
 }
 
 //13- Get Gyro scaled data
-void MPU6050_Get_Gyro_Scale(ScaledData_Def *scaledDef) {
-	RawData_Def myGyroRaw;
+void MPU6050_Get_Gyro_Scale(ScaledData_t *scaledDef) {
+	RawData_t myGyroRaw;
 	MPU6050_Get_Gyro_RawData(&myGyroRaw);
 
 	//Gyro Scale data

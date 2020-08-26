@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "MPU6050.h"
+#include "AccGyro.h"
+#include "settings.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,10 +35,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define minStepCycles 500.0f
-#define maxSiunciamaReiksme 500.0f
-
 #define MPU_PackSize 6 + 2 + 6
+#define ACC_daliklis (ACC_FullScale * 1000.0f / 32768.0f)
 
 /* USER CODE END PD */
 
@@ -65,8 +65,8 @@ struct {
 	uint8_t rem :6;
 } mFlags = { 0, 1, 0 };
 
-RawData_Def myAccelRaw;
-ScaledData_Def myAccelScaled;
+RawData_t myAccelRaw;
+ScaledData_t myAccelScaled;
 
 uint8_t mDataRead[MPU_PackSize];	//Acc + Temp + Gyro
 
@@ -91,13 +91,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C3) {
+		myAccelScaled.x = (int16_t) ((mDataRead[0] << 8) | mDataRead[1])
+				* ACC_daliklis; // x-Axis
+		myAccelScaled.y = (int16_t) ((mDataRead[2] << 8) | mDataRead[3])
+				* ACC_daliklis; // y-Axis
+		myAccelScaled.z = (int16_t) ((mDataRead[4] << 8) | mDataRead[5])
+				* ACC_daliklis; // z-Axis
 	}
-	myAccelRaw.x = (int16_t) ((mDataRead[0] << 8) | mDataRead[1])
-			* (1000.0f / 16384.0f); // x-Axis
-	myAccelRaw.y = (int16_t) ((mDataRead[2] << 8) | mDataRead[3])
-			* (1000.0f / 16384.0f); // y-Axis
-	myAccelRaw.z = (int16_t) ((mDataRead[4] << 8) | mDataRead[5])
-			* (1000.0f / 16384.0f); // z-Axis
 }
 
 /* USER CODE END PFP */
@@ -145,7 +145,7 @@ int main(void) {
 	MPU6050_Init(&hi2c3);
 	MPU_ConfigTypeDef myMpuConfig;
 
-	myMpuConfig.Accel_Full_Scale = AFS_SEL_4g;
+	myMpuConfig.Accel_Full_Scale = AFS_SEL_8g;
 	myMpuConfig.ClockSource = Internal_8MHz;
 	myMpuConfig.CONFIG_DLPF = DLPF_184A_188G_Hz;
 	myMpuConfig.Gyro_Full_Scale = FS_SEL_500;
@@ -174,21 +174,14 @@ int main(void) {
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	HAL_Delay(50);
 
 	while (1) {
 
-		//==== Akselerometro duomenu nuskaitymas ===================================
+		//==== ACC/GYRO duomenu nuskaitymas ========================================
 		if (mFlags.accDataReady) {
 			mFlags.accDataReady = 0;
-//			MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
-
 			HAL_I2C_Mem_Read_DMA(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1,
-					mDataRead, 1);
-
-//			HAL_I2C_Mem_Read_IT(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1,
-//					mDataRead, 2);
-
+					mDataRead, MPU_PackSize);
 		}
 
 		/* USER CODE END WHILE */

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>	//Boolean
 #include <math.h>			//Pow()
+#include "AccGyro.h"
 
 //Define Registers
 #define WHO_AM_I_REG		0x75
@@ -20,13 +21,10 @@
 #define TEMP_OUT_H_REG		0x41
 #define GYRO_XOUT_H_REG		0x43
 #define FIFO_EN_REG 		0x23
-#define INT_ENABLE_REG 		0x38
 #define I2CMACO_REG 		0x23
 #define USER_CNT_REG		0x6A
 #define FIFO_COUNTH_REG 	0x72
 #define FIFO_R_W_REG 		0x74
-
-#define INT_PIN_CFG 		0x37
 
 //TypeDefs and Enums
 //1- MPU Configuration
@@ -83,14 +81,14 @@ typedef struct {
 	int16_t x;
 	int16_t y;
 	int16_t z;
-} RawData_Def;
+} RawData_t;
 
 //8. Scaled data typedef
 typedef struct {
 	float x;
 	float y;
 	float z;
-} ScaledData_Def;
+} ScaledData_t;
 
 //Function Prototype
 //1- i2c Handler
@@ -110,17 +108,17 @@ uint8_t MPU6050_Get_FSYNC(void);
 //8- Set External Frame Sync.
 void MPU6050_Set_FSYNC(enum EXT_SYNC_SET_ENUM ext_Sync);
 //9- Get Accel Raw Data
-void MPU6050_Get_Accel_RawData(RawData_Def *rawDef); //************
+void MPU6050_Get_Accel_RawData(RawData_t *rawDef); //************
 //10- Get Accel scaled data
-void MPU6050_Get_Accel_Scale(ScaledData_Def *scaledDef); //***********
-void MPU6050_Get_Accel_Scale_AllData(ScaledData_Def *scaledDef,
-		RawData_Def *AccelRData);
+void MPU6050_Get_Accel_Scale(ScaledData_t *scaledDef); //***********
+void MPU6050_Get_Accel_Scale_AllData(ScaledData_t *scaledDef,
+		RawData_t *AccelRData);
 //11- Get Accel calibrated data
-void MPU6050_Get_Accel_Cali(ScaledData_Def *CaliDef);
+void MPU6050_Get_Accel_Cali(ScaledData_t *CaliDef);
 //12- Get Gyro Raw Data
-void MPU6050_Get_Gyro_RawData(RawData_Def *rawDef);
+void MPU6050_Get_Gyro_RawData(RawData_t *rawDef);
 //13- Get Gyro scaled data
-void MPU6050_Get_Gyro_Scale(ScaledData_Def *scaledDef);
+void MPU6050_Get_Gyro_Scale(ScaledData_t *scaledDef);
 //14- Accel Calibration
 void _Accel_Cali(float x_min, float x_max, float y_min, float y_max,
 		float z_min, float z_max);
