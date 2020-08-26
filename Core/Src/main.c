@@ -36,6 +36,8 @@
 #define minStepCycles 500.0f
 #define maxSiunciamaReiksme 500.0f
 
+#define MPU_PackSize 6 + 2 + 6
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +47,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c3;
+DMA_HandleTypeDef hdma_i2c3_rx;
+DMA_HandleTypeDef hdma_i2c3_tx;
 
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim14;
@@ -61,10 +65,10 @@ struct {
 	uint8_t rem :6;
 } mFlags = { 0, 1, 0 };
 
-RawData_Def myAccelRaw, myGyroRaw;
-ScaledData_Def myAccelScaled, myGyroScaled;
+RawData_Def myAccelRaw;
+ScaledData_Def myAccelScaled;
 
-uint8_t mDataRead[6 + 2 + 6];	//Acc + Temp + Gyro
+uint8_t mDataRead[MPU_PackSize];	//Acc + Temp + Gyro
 
 /* USER CODE END PV */
 
@@ -83,15 +87,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (hi2c->Instance == I2C2) {
-	}
-}
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == GPIO_PIN_10) {
-		mFlags.accDataReady = 1;
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if (hi2c->Instance == I2C3) {
 	}
+	myAccelRaw.x = (int16_t) ((mDataRead[0] << 8) | mDataRead[1])
+			* (1000.0f / 16384.0f); // x-Axis
+	myAccelRaw.y = (int16_t) ((mDataRead[2] << 8) | mDataRead[3])
+			* (1000.0f / 16384.0f); // y-Axis
+	myAccelRaw.z = (int16_t) ((mDataRead[4] << 8) | mDataRead[5])
+			* (1000.0f / 16384.0f); // z-Axis
 }
 
 /* USER CODE END PFP */
@@ -136,12 +142,8 @@ int main(void) {
 	/* USER CODE BEGIN 2 */
 
 	//==== MPU init ================================================================
-//	HAL_I2C_Mem_Read_DMA(&hi2c2, ((0x68 | 0) << 1), 0x75, 1, mDataRead,
-//			6 + 2 + 6);
-//	HAL_Delay(10);
-	MPU_ConfigTypeDef myMpuConfig;
-
 	MPU6050_Init(&hi2c3);
+	MPU_ConfigTypeDef myMpuConfig;
 
 	myMpuConfig.Accel_Full_Scale = AFS_SEL_4g;
 	myMpuConfig.ClockSource = Internal_8MHz;
@@ -150,7 +152,7 @@ int main(void) {
 	myMpuConfig.Sleep_Mode_Bit = 0;  //1: sleep mode, 0: normal mode
 	MPU6050_Config(&myMpuConfig);
 
-	I2C_Write8(INT_PIN_CFG, 1 << 4);		//clear flag after read
+	I2C_Write8(INT_PIN_CFG, (1 << 4) | (1 << 5));		//clear flag after read
 	I2C_Write8(INT_ENABLE_REG, 1);		//enable interupt
 
 	//==== PWM init ================================================================
@@ -176,9 +178,17 @@ int main(void) {
 
 	while (1) {
 
+		//==== Akselerometro duomenu nuskaitymas ===================================
 		if (mFlags.accDataReady) {
 			mFlags.accDataReady = 0;
-			MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
+//			MPU6050_Get_Accel_Scale_AllData(&myAccelScaled, &myAccelRaw);
+
+			HAL_I2C_Mem_Read_DMA(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1,
+					mDataRead, 1);
+
+//			HAL_I2C_Mem_Read_IT(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1,
+//					mDataRead, 2);
+
 		}
 
 		/* USER CODE END WHILE */
@@ -204,7 +214,6 @@ int main(void) {
 					TIM4->CCR4 = ((float) (mPaketas[7] | (mPaketas[8] << 8))
 							* minStepCycles / maxSiunciamaReiksme
 							+ minStepCycles);
-
 				} else {
 					HAL_UART_DMAStop(&huart4);
 					HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
@@ -426,9 +435,15 @@ static void MX_DMA_Init(void) {
 	__HAL_RCC_DMA1_CLK_ENABLE();
 
 	/* DMA interrupt init */
+	/* DMA1_Stream1_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 	/* DMA1_Stream2_IRQn interrupt configuration */
 	HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+	/* DMA1_Stream4_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
 
 }
 
@@ -458,7 +473,7 @@ static void MX_GPIO_Init(void) {
 	/*Configure GPIO pin : PA10 */
 	GPIO_InitStruct.Pin = GPIO_PIN_10;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	/* EXTI interrupt init*/
@@ -498,6 +513,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	/* Prevent unused argument(s) compilation warning */
 	UNUSED(huart);
 	mFlags.dataUart = 1;
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == GPIO_PIN_10) {
+		mFlags.accDataReady = 1;
+	}
 }
 
 /* USER CODE END 4 */
