@@ -22,8 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "MPU6050.h"
 #include "AccGyro.h"
+#include "Motors.h"
 #include "settings.h"
 /* USER CODE END Includes */
 
@@ -36,7 +36,6 @@
 /* USER CODE BEGIN PD */
 
 #define MPU_PackSize 6 + 2 + 6
-#define ACC_daliklis (ACC_FullScale * 1000.0f / 32768.0f)
 
 /* USER CODE END PD */
 
@@ -65,9 +64,6 @@ struct {
 	uint8_t rem :6;
 } mFlags = { 0, 1, 0 };
 
-RawData_t myAccelRaw;
-ScaledData_t myAccelScaled;
-
 uint8_t mDataRead[MPU_PackSize];	//Acc + Temp + Gyro
 
 /* USER CODE END PV */
@@ -91,12 +87,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c->Instance == I2C3) {
-		myAccelScaled.x = (int16_t) ((mDataRead[0] << 8) | mDataRead[1])
-				* ACC_daliklis; // x-Axis
-		myAccelScaled.y = (int16_t) ((mDataRead[2] << 8) | mDataRead[3])
-				* ACC_daliklis; // y-Axis
-		myAccelScaled.z = (int16_t) ((mDataRead[4] << 8) | mDataRead[5])
-				* ACC_daliklis; // z-Axis
+		AG_AddNewValues((int16_t) ((mDataRead[0] << 8) | mDataRead[1]),
+				(int16_t) ((mDataRead[2] << 8) | mDataRead[3]),
+				(int16_t) ((mDataRead[4] << 8) | mDataRead[5]));
 	}
 }
 
@@ -142,27 +135,18 @@ int main(void) {
 	/* USER CODE BEGIN 2 */
 
 	//==== MPU init ================================================================
-	MPU6050_Init(&hi2c3);
-	MPU_ConfigTypeDef myMpuConfig;
-
-	myMpuConfig.Accel_Full_Scale = AFS_SEL_8g;
-	myMpuConfig.ClockSource = Internal_8MHz;
-	myMpuConfig.CONFIG_DLPF = DLPF_184A_188G_Hz;
-	myMpuConfig.Gyro_Full_Scale = FS_SEL_500;
-	myMpuConfig.Sleep_Mode_Bit = 0;  //1: sleep mode, 0: normal mode
-	MPU6050_Config(&myMpuConfig);
-
-	I2C_Write8(INT_PIN_CFG, (1 << 4) | (1 << 5));		//clear flag after read
-	I2C_Write8(INT_ENABLE_REG, 1);		//enable interupt
+	AG_start(&hi2c3);
 
 	//==== PWM init ================================================================
 	HAL_TIM_Base_Start(&htim4);
-	HAL_TIM_Base_Start_IT(&htim14);	//apsauga nuo negaunamu duomenu
 
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);	//BL
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);	//FL
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);	//BR
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);	//FR
+
+	HAL_TIM_Base_Start_IT(&htim14);	//apsauga nuo negaunamu duomenu
+	Motors_Init(TIM4);
 
 	//==== uart init ===============================================================
 	HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
