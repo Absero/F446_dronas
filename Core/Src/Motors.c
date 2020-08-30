@@ -4,17 +4,6 @@ void Motors_Init(TIM_TypeDef *motorTimer) {
 	Motors.TIM = motorTimer;
 }
 
-void Motors_ChangeValueFromPacket() {
-	int16_t temp[4] = { 0 };
-
-	for (uint8_t i = 0, j = 1; i < 4; i++, j += 2) {
-		temp[i] = Motors.packet[j] | (Motors.packet[j + 1] << 8);
-		if (temp[i] > maxMotorValue) temp[i] = maxMotorValue;
-	}
-
-	Motors_Set(temp);
-}
-
 void Motors_Hold() {
 	//=========== Apskaiciuoti koeficientus islyginimui ===========
 	//Uzfixuoti reiksmes
@@ -31,22 +20,15 @@ void Motors_Hold() {
 	if (y > ACC_TimkamosReiksmesDiapazonas) tiltFL(-1);
 	else if (y < -ACC_TimkamosReiksmesDiapazonas) tiltFL(1);
 
+	//situs reiktu keist tik kai stabilizuota jau
 	if (z > 0) {
 	} else if (z != 0) {
 	}
 
-	int16_t temp[4] = { 0 };
-
-	for (uint8_t i = 0, j = 1; i < 4; i++, j += 2) {
-		temp[i] = Motors.packet[j] | (Motors.packet[j + 1] << 8);
-		if (temp[i] > maxMotorValue) temp[i] = maxMotorValue;
-	}
-
-	Motors_Set(temp);
+	Motors_Set();
 }
 
-void Motors_Set(int16_t *valueArray) {
-	//todo perkelti masyvo sudaryma i cia
+void Motors_Set() {
 	int16_t temp[4] = { 0 };
 
 	for (uint8_t i = 0, j = 1; i < 4; i++, j += 2) {
@@ -55,20 +37,29 @@ void Motors_Set(int16_t *valueArray) {
 	}
 
 	//todo praleisti per vidurkinima
-	if (*(valueArray) == 0 && *(valueArray + 1) == 0 && *(valueArray + 2) == 0 && *(valueArray + 3) == 0) {
+	if (*(temp) == 0 && *(temp + 1) == 0 && *(temp + 2) == 0 && *(temp + 3) == 0) {
 		//kad nesisuktu kai nereikia
-		Motors.TIM->CCR1 = (*valueArray * minMotorValue / maxSiunciamaReiksme + minMotorValue);			//BL
-		Motors.TIM->CCR2 = (*(valueArray + 1) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//FL
-		Motors.TIM->CCR3 = (*(valueArray + 2) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//BR
-		Motors.TIM->CCR4 = (*(valueArray + 3) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//FR
+		Motors.TIM->CCR1 = minMotorValue;		//BL
+		Motors.TIM->CCR2 = minMotorValue;		//FL
+		Motors.TIM->CCR3 = minMotorValue;		//BR
+		Motors.TIM->CCR4 = minMotorValue;		//FR
 		for (uint8_t i = 0; i < 4; i++)
 			Motors.coefACC.coeff[i] = 0;
 	} else {
 		//todo patikrinti min max ribas
-		Motors.TIM->CCR1 = ((*valueArray + Motors.coefACC.coeff[0]) * minMotorValue / maxSiunciamaReiksme + minMotorValue);			//BL
-		Motors.TIM->CCR2 = ((*(valueArray + 1) + Motors.coefACC.coeff[1]) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//FL
-		Motors.TIM->CCR3 = ((*(valueArray + 2) + Motors.coefACC.coeff[2]) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//BR
-		Motors.TIM->CCR4 = ((*(valueArray + 3) + Motors.coefACC.coeff[3]) * minMotorValue / maxSiunciamaReiksme + minMotorValue);	//FR
+		int32_t temp1;
+
+		for (uint8_t i = 0; i < 4; i++) {
+			temp1 = temp[i] + Motors.coefACC.coeff[i];
+			if (temp1 > maxSiunciamaReiksme) temp1 = maxSiunciamaReiksme;
+			if (temp1 < 0) temp1 = 0;
+			temp[i] = temp1;
+		}
+
+		Motors.TIM->CCR1 = (temp[0] * minMotorValue / maxSiunciamaReiksme + minMotorValue);		//BL
+		Motors.TIM->CCR2 = (temp[1] * minMotorValue / maxSiunciamaReiksme + minMotorValue);		//FL
+		Motors.TIM->CCR3 = (temp[2] * minMotorValue / maxSiunciamaReiksme + minMotorValue);		//BR
+		Motors.TIM->CCR4 = (temp[3] * minMotorValue / maxSiunciamaReiksme + minMotorValue);		//FR
 	}
 }
 

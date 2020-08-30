@@ -27,11 +27,9 @@ enum {
 //Functions
 void Motors_Init(TIM_TypeDef *motorTimer);
 
-void Motors_ChangeValueFromPacket();
-
 void Motors_Hold();
 
-void Motors_Set(int16_t *temp);
+void Motors_Set();
 
 void tiltFL(int8_t kryptis);
 void tiltFR(int8_t kryptis);
