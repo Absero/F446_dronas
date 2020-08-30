@@ -62,13 +62,12 @@ struct {
 		uint8_t Place;	//Place in array
 		uint8_t Counter;
 	} ValueBuffer;
-
 } AG;
 
 //Functions
 void AG_start(I2C_HandleTypeDef *i2c_instance);
 
-void AG_AddNewValues(uint16_t x, uint16_t y, uint16_t z);
+void AG_AddNewValues(int16_t x, int16_t y, int16_t z);
 
 //=================== I2C ===================
 void I2C_Write8(uint8_t ADDR, uint8_t data);

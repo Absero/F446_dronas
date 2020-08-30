@@ -56,13 +56,13 @@ UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_uart4_rx;
 
 /* USER CODE BEGIN PV */
-uint8_t mPaketas[10] = { 0 };
 
 struct {
 	uint8_t dataUart :1;
+	uint8_t accDataReadyRead :1;
 	uint8_t accDataReady :1;
-	uint8_t rem :6;
-} mFlags = { 0, 1, 0 };
+	uint8_t rem :5;
+} mFlags = { 0, 1, 0, 0 };
 
 uint8_t mDataRead[MPU_PackSize];	//Acc + Temp + Gyro
 
@@ -85,13 +85,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (hi2c->Instance == I2C3) {
-		AG_AddNewValues((int16_t) ((mDataRead[0] << 8) | mDataRead[1]),
-				(int16_t) ((mDataRead[2] << 8) | mDataRead[3]),
-				(int16_t) ((mDataRead[4] << 8) | mDataRead[5]));
-	}
-}
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c);
 
 /* USER CODE END PFP */
 
@@ -145,27 +139,33 @@ int main(void) {
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);	//BR
 	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);	//FR
 
-	HAL_TIM_Base_Start_IT(&htim14);	//apsauga nuo negaunamu duomenu
+	HAL_TIM_Base_Start_IT(&htim14);  //apsauga nuo negaunamu duomenu
 	Motors_Init(TIM4);
 
 	//==== uart init ===============================================================
-	HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
+	HAL_UART_Receive_DMA(&huart4, Motors.packet, 10);
 	HAL_Delay(1);
 	HAL_UART_DMAStop(&huart4);
-	HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
+	HAL_UART_Receive_DMA(&huart4, Motors.packet, 10);
 
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-
 	while (1) {
 
 		//==== ACC/GYRO duomenu nuskaitymas ========================================
+		//nuskaityti duomenis is akselerometro ir giroskopo kai duomenys paruosti
+		if (mFlags.accDataReadyRead) {
+			mFlags.accDataReadyRead = 0;
+			HAL_I2C_Mem_Read_DMA(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1, mDataRead, MPU_PackSize);
+		}
+
+		//apdoroti nuskaitytus duomenis
 		if (mFlags.accDataReady) {
 			mFlags.accDataReady = 0;
-			HAL_I2C_Mem_Read_DMA(&hi2c3, MPU_ADDR << 1, ACCEL_XOUT_H_REG, 1,
-					mDataRead, MPU_PackSize);
+			AG_AddNewValues((int16_t) ((mDataRead[0] << 8) | mDataRead[1]), (int16_t) ((mDataRead[2] << 8) | mDataRead[3]),
+					(int16_t) ((mDataRead[4] << 8) | mDataRead[5]));
 		}
 
 		/* USER CODE END WHILE */
@@ -173,29 +173,20 @@ int main(void) {
 		/* USER CODE BEGIN 3 */
 		if (mFlags.dataUart) {
 			mFlags.dataUart = 0;
-			if (mPaketas[0] == '3') {
-				if (mPaketas[9] == getCRC(mPaketas, 9)) {
-					TIM14->CNT = 0;
-
-					//TODO padaryt funkcija kuri patikrintu min max reiksmes tiesiog, koeficientu irasyma
-
-					TIM4->CCR1 = ((float) (mPaketas[1] | (mPaketas[2] << 8))
-							* minStepCycles / maxSiunciamaReiksme
-							+ minStepCycles);
-					TIM4->CCR2 = ((float) (mPaketas[3] | (mPaketas[4] << 8))
-							* minStepCycles / maxSiunciamaReiksme
-							+ minStepCycles);
-					TIM4->CCR3 = ((float) (mPaketas[5] | (mPaketas[6] << 8))
-							* minStepCycles / maxSiunciamaReiksme
-							+ minStepCycles);
-					TIM4->CCR4 = ((float) (mPaketas[7] | (mPaketas[8] << 8))
-							* minStepCycles / maxSiunciamaReiksme
-							+ minStepCycles);
-				} else {
-					HAL_UART_DMAStop(&huart4);
-					HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
+			if (Motors.packet[9] == getCRC(Motors.packet, 9)) {
+				TIM14->CNT = 0;
+				switch (Motors.packet[0]) {
+					case '3':
+//						Motors_ChangeValueFromPacket();
+						break;
+					case 'H':	//Hold
+						Motors_Hold();
+						break;
 				}
 			} else {
+				//reset uart
+				HAL_UART_DMAStop(&huart4);
+				HAL_UART_Receive_DMA(&huart4, Motors.packet, 10);
 			}
 		}
 	}
@@ -232,8 +223,7 @@ void SystemClock_Config(void) {
 	}
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -312,28 +302,23 @@ static void MX_TIM4_Init(void) {
 	}
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig)
-			!= HAL_OK) {
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK) {
 		Error_Handler();
 	}
 	sConfigOC.OCMode = TIM_OCMODE_PWM1;
 	sConfigOC.Pulse = 500 - 1;
 	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1)
-			!= HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
 		Error_Handler();
 	}
-	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2)
-			!= HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK) {
 		Error_Handler();
 	}
-	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3)
-			!= HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3) != HAL_OK) {
 		Error_Handler();
 	}
-	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4)
-			!= HAL_OK) {
+	if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK) {
 		Error_Handler();
 	}
 	/* USER CODE BEGIN TIM4_Init 2 */
@@ -466,8 +451,7 @@ uint8_t getCRC(uint8_t *message, uint8_t length) {
 	for (uint8_t i = 0; i < length; i++) {
 		crc ^= *(message + i);
 		for (uint8_t j = 0; j < 8; j++) {
-			if (crc & 1)
-				crc ^= 0x91; //CRC7_POLY = 0x91
+			if (crc & 1) crc ^= 0x91;  //CRC7_POLY = 0x91
 			crc >>= 1;
 		}
 	}
@@ -477,12 +461,12 @@ uint8_t getCRC(uint8_t *message, uint8_t length) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM14) {
 		HAL_UART_DMAStop(&huart4);
-		HAL_UART_Receive_DMA(&huart4, mPaketas, 10);
+		HAL_UART_Receive_DMA(&huart4, Motors.packet, 10);
 
-		TIM4->CCR1 = minStepCycles;
-		TIM4->CCR2 = minStepCycles;
-		TIM4->CCR3 = minStepCycles;
-		TIM4->CCR4 = minStepCycles;
+		TIM4->CCR1 = minMotorValue;
+		TIM4->CCR2 = minMotorValue;
+		TIM4->CCR3 = minMotorValue;
+		TIM4->CCR4 = minMotorValue;
 	}
 }
 
@@ -494,8 +478,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_10) {
-		mFlags.accDataReady = 1;
+		mFlags.accDataReadyRead = 1;
 	}
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if (hi2c->Instance == I2C3) mFlags.accDataReady = 1;
 }
 
 /* USER CODE END 4 */

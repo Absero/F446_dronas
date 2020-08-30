@@ -1,3 +1,3 @@
 AccGyro.c:3:6:AG_start	24	static
 AccGyro.c:53:6:AG_AddNewValues	24	static
-AccGyro.c:69:6:I2C_Write8	32	static
+AccGyro.c:87:6:I2C_Write8	32	static

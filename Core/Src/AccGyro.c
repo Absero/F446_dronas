@@ -50,19 +50,37 @@ void AG_start(I2C_HandleTypeDef *i2c_instance) {
 	I2C_Write8(INT_ENABLE_REG, 1);
 }
 
-void AG_AddNewValues(uint16_t x, uint16_t y, uint16_t z) {
+void AG_AddNewValues(int16_t x, int16_t y, int16_t z) {
+	if (AG.ValueBuffer.Counter < ACC_MeanValues) AG.ValueBuffer.Counter++;
+
 	AG.LastRawValues.x = x;
 	AG.LastRawValues.y = y;
 	AG.LastRawValues.z = z;
 
 	uint8_t currentPlace = AG.ValueBuffer.Place;
 
-//	AG.ValueBuffer.Sum.x -=
+	//atimti seniausias reiksmes
+	AG.ValueBuffer.Sum.x -= AG.ValueBuffer.ValueArrays.x[currentPlace];
+	AG.ValueBuffer.Sum.y -= AG.ValueBuffer.ValueArrays.y[currentPlace];
+	AG.ValueBuffer.Sum.z -= AG.ValueBuffer.ValueArrays.z[currentPlace];
 
+	//irasyti naujausias reiksmes buferyje
 	AG.ValueBuffer.ValueArrays.x[currentPlace] = x;
+	AG.ValueBuffer.ValueArrays.y[currentPlace] = y;
+	AG.ValueBuffer.ValueArrays.z[currentPlace] = z;
 
-	AG.ValueBuffer.Place = AG.ValueBuffer.Place == ACC_MeanValues - 1 ? AG.ValueBuffer.Place + 1 : 0;
-	if (AG.ValueBuffer.Counter < ACC_MeanValues) AG.ValueBuffer.Counter++;
+	//prideti naujausias reiksmes
+	AG.ValueBuffer.Sum.x += x;
+	AG.ValueBuffer.Sum.y += y;
+	AG.ValueBuffer.Sum.z += z;
+
+	//suskaiciuoti nauja vidurki
+	AG.ValueBuffer.CurrentMean.x = (int16_t) ((float) AG.ValueBuffer.Sum.x / (float) AG.ValueBuffer.Counter);
+	AG.ValueBuffer.CurrentMean.y = (int16_t) ((float) AG.ValueBuffer.Sum.y / (float) AG.ValueBuffer.Counter);
+	AG.ValueBuffer.CurrentMean.z = (int16_t) ((float) AG.ValueBuffer.Sum.z / (float) AG.ValueBuffer.Counter);
+
+	//pakeisti vieta
+	AG.ValueBuffer.Place = AG.ValueBuffer.Place == ACC_MeanValues - 1 ? 0 : AG.ValueBuffer.Place + 1;
 }
 
 //=================== I2C ===================
